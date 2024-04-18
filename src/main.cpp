@@ -7,6 +7,12 @@
 #include <glm/mat4x4.hpp>
 
 #include <iostream>
+#include <vector>
+
+bool isDeviceSuitable(VkPhysicalDevice device)
+{
+  return true;
+}
 
 int main()
 {
@@ -30,10 +36,32 @@ int main()
   createInfo.ppEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&createInfo.enabledExtensionCount);
   createInfo.enabledLayerCount = 0;
 
-  VkInstance instance;
+  VkInstance instance = VK_NULL_HANDLE;
   if (VK_SUCCESS != vkCreateInstance(&createInfo, nullptr, &instance))
   {
     throw std::runtime_error("failed to create instance!");
+  }
+
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  if (deviceCount == 0)
+  {
+    throw std::runtime_error("failed to find GPUs with Vulkan support!");
+  }
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+  for (const auto &device : devices)
+  {
+    if (isDeviceSuitable(device))
+    {
+      physicalDevice = device;
+      break;
+    }
+  }
+  if (physicalDevice == VK_NULL_HANDLE)
+  {
+    throw std::runtime_error("failed to find a suitable GPU!");
   }
 
   glm::mat4 matrix;
