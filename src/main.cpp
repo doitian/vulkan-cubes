@@ -8,28 +8,46 @@
 
 #include <iostream>
 
-int main() {
-    glfwInit();
+int main()
+{
+  glfwInit();
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+  GLFWwindow *window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
 
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+  VkApplicationInfo appInfo{};
+  appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  appInfo.pApplicationName = "Hello Triangle";
+  appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+  appInfo.pEngineName = "No Engine";
+  appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+  appInfo.apiVersion = VK_API_VERSION_1_0;
 
-    std::cout << extensionCount << " extensions supported\n";
+  VkInstanceCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  createInfo.pApplicationInfo = &appInfo;
+  createInfo.ppEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&createInfo.enabledExtensionCount);
+  createInfo.enabledLayerCount = 0;
 
-    glm::mat4 matrix;
-    glm::vec4 vec;
-    auto test = matrix * vec;
+  VkInstance instance;
+  if (VK_SUCCESS != vkCreateInstance(&createInfo, nullptr, &instance))
+  {
+    throw std::runtime_error("failed to create instance!");
+  }
 
-    while(!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-    }
+  glm::mat4 matrix;
+  glm::vec4 vec;
+  auto test = matrix * vec;
 
-    glfwDestroyWindow(window);
+  while (!glfwWindowShouldClose(window))
+  {
+    glfwPollEvents();
+  }
 
-    glfwTerminate();
+  vkDestroyInstance(instance, nullptr);
+  glfwDestroyWindow(window);
+  glfwTerminate();
 
-    return 0;
+  return 0;
 }
