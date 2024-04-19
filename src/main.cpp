@@ -8,6 +8,8 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
+#include <algorithm>
 
 struct QueueFamilyIndices
 {
@@ -27,6 +29,7 @@ class App
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
   VkQueue graphicsQueue = VK_NULL_HANDLE;
+  VkQueue presentQueue = VK_NULL_HANDLE;
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 public:
@@ -84,6 +87,7 @@ private:
     this->physicalDevice = physicalDevice;
     this->device = createDevice(physicalDevice, indices);
     vkGetDeviceQueue(device, indices.graphicsFamily, 0, &this->graphicsQueue);
+    vkGetDeviceQueue(device, indices.presentFamily, 0, &this->presentQueue);
   }
 
   static VkInstance createInstance()
@@ -169,17 +173,24 @@ private:
   static VkDevice
   createDevice(VkPhysicalDevice physicalDevice, const QueueFamilyIndices &indices)
   {
-    VkDeviceQueueCreateInfo queueCreateInfo{};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
-    queueCreateInfo.queueCount = 1;
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     float queuePriorities = 1.0f;
-    queueCreateInfo.pQueuePriorities = &queuePriorities;
+    std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), std::back_inserter(queueCreateInfos),
+                   [indices, &queuePriorities](uint32_t queueFamily)
+                   {
+                     VkDeviceQueueCreateInfo queueCreateInfo{};
+                     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                     queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
+                     queueCreateInfo.queueCount = 1;
+                     queueCreateInfo.pQueuePriorities = &queuePriorities;
+                     return queueCreateInfo;
+                   });
 
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-    deviceCreateInfo.queueCreateInfoCount = 1;
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+    deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
