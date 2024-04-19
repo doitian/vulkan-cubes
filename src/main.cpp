@@ -9,11 +9,6 @@
 #include <iostream>
 #include <vector>
 
-bool isDeviceSuitable(VkPhysicalDevice device)
-{
-  return true;
-}
-
 int main()
 {
   glfwInit();
@@ -42,7 +37,6 @@ int main()
     throw std::runtime_error("failed to create instance!");
   }
 
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
   if (deviceCount == 0)
@@ -51,10 +45,22 @@ int main()
   }
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  uint32_t graphicsFamilyIndex = 0;
   for (const auto &device : devices)
   {
-    if (isDeviceSuitable(device))
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    std::cout << "queueFamilyCount: " << queueFamilyCount << std::endl;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+    auto graphicsFamilyIt = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](VkQueueFamilyProperties item)
+                                         { return item.queueFlags & VK_QUEUE_GRAPHICS_BIT; });
+    if (graphicsFamilyIt != queueFamilies.end())
     {
+      graphicsFamilyIndex = std::distance(graphicsFamilyIt, queueFamilies.begin());
       physicalDevice = device;
       break;
     }
