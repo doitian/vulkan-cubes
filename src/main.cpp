@@ -20,6 +20,8 @@ class App
   VkInstance instance = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
+  VkQueue graphicsQueue = VK_NULL_HANDLE;
+  VkSurfaceKHR surface = VK_NULL_HANDLE;
 
 public:
   void run()
@@ -35,12 +37,16 @@ public:
     {
       vkDestroyDevice(this->device, nullptr);
     }
+
+    if (this->surface != VK_NULL_HANDLE)
+    {
+      vkDestroySurfaceKHR(instance, surface, nullptr);
+    }
+
     if (this->instance != VK_NULL_HANDLE)
     {
       vkDestroyInstance(this->instance, nullptr);
     }
-
-    vkDestroyInstance(instance, nullptr);
 
     if (this->window != nullptr)
     {
@@ -67,6 +73,11 @@ private:
     auto [physicalDevice, indices] = pickPhysicalDevice(this->instance, graphicsFamilyIndex);
     this->physicalDevice = physicalDevice;
     this->device = createDevice(physicalDevice, indices);
+    vkGetDeviceQueue(device, indices.graphicsFamily, 0, &this->graphicsQueue);
+    if (glfwCreateWindowSurface(instance, window, nullptr, &this->surface) != VK_SUCCESS)
+    {
+      throw std::runtime_error("failed to create window surface!");
+    }
   }
 
   static VkInstance createInstance()
