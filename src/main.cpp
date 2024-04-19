@@ -22,6 +22,10 @@ struct QueueFamilyIndices
   }
 };
 
+const char *const REQUIRED_EXTENSIONS[] = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+const size_t REQUIRED_EXTENSIONS_SIZE = sizeof(REQUIRED_EXTENSIONS) / sizeof(REQUIRED_EXTENSIONS[0]);
+
 class App
 {
   GLFWwindow *window = nullptr;
@@ -103,8 +107,13 @@ private:
     VkInstanceCreateInfo instanceCreateInfo{};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &appInfo;
-    instanceCreateInfo.ppEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&instanceCreateInfo.enabledExtensionCount);
     instanceCreateInfo.enabledLayerCount = 0;
+
+    uint32_t glfwEnabledExtensionCount = 0;
+    const char **glfwEnabledExtensionNames = glfwGetRequiredInstanceExtensions(&glfwEnabledExtensionCount);
+    std::vector<const char *> enabledExtensions(glfwEnabledExtensionNames, glfwEnabledExtensionNames + glfwEnabledExtensionCount);
+    instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
+    instanceCreateInfo.enabledExtensionCount = enabledExtensions.size();
 
     VkInstance instance = VK_NULL_HANDLE;
     if (VK_SUCCESS != vkCreateInstance(&instanceCreateInfo, nullptr, &instance))
@@ -172,8 +181,7 @@ private:
 
   static bool checkDeviceExtensionSupport(VkPhysicalDevice device)
   {
-    std::vector<std::string> requiredExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    auto requiredExtensions = std::vector<std::string>(REQUIRED_EXTENSIONS, REQUIRED_EXTENSIONS + REQUIRED_EXTENSIONS_SIZE);
 
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
