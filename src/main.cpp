@@ -161,13 +161,31 @@ private:
         }
       }
 
-      if (indices.isComplete(queueFamilyCount))
+      if (indices.isComplete(queueFamilyCount) && checkDeviceExtensionSupport(device))
       {
         return std::make_pair(device, std::move(indices));
       }
     }
 
     throw std::runtime_error("failed to find a suitable GPU!");
+  }
+
+  static bool checkDeviceExtensionSupport(VkPhysicalDevice device)
+  {
+    std::vector<std::string> requiredExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+    for (const auto &extension : availableExtensions)
+    {
+      std::erase(requiredExtensions, extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
   }
 
   static VkDevice
