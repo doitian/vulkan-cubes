@@ -12,6 +12,7 @@
 struct QueueFamilyIndices
 {
   uint32_t graphicsFamily;
+  uint32_t presentFamily;
 };
 
 class App
@@ -70,14 +71,14 @@ private:
     this->instance = createInstance();
 
     uint32_t graphicsFamilyIndex;
-    auto [physicalDevice, indices] = pickPhysicalDevice(this->instance, graphicsFamilyIndex);
-    this->physicalDevice = physicalDevice;
-    this->device = createDevice(physicalDevice, indices);
-    vkGetDeviceQueue(device, indices.graphicsFamily, 0, &this->graphicsQueue);
     if (glfwCreateWindowSurface(instance, window, nullptr, &this->surface) != VK_SUCCESS)
     {
       throw std::runtime_error("failed to create window surface!");
     }
+    auto [physicalDevice, indices] = pickPhysicalDevice(this->instance, this->surface);
+    this->physicalDevice = physicalDevice;
+    this->device = createDevice(physicalDevice, indices);
+    vkGetDeviceQueue(device, indices.graphicsFamily, 0, &this->graphicsQueue);
   }
 
   static VkInstance createInstance()
@@ -104,7 +105,7 @@ private:
     return instance;
   }
 
-  static std::pair<VkPhysicalDevice, QueueFamilyIndices> pickPhysicalDevice(VkInstance instance, uint32_t &graphicsFamilyIndex)
+  static std::pair<VkPhysicalDevice, QueueFamilyIndices> pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface)
   {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -123,19 +124,45 @@ private:
       std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
       vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-      auto graphicsFamilyIt = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](VkQueueFamilyProperties item)
-                                           { return item.queueFlags & VK_QUEUE_GRAPHICS_BIT; });
-      if (graphicsFamilyIt != queueFamilies.end())
+      indices.graphicsFamily = queueFamilyCount;
+      indices.presentFamily = queueFamilyCount;
+      auto isSuitable = [queueFamilyCount, &indices]()
       {
-        indices.graphicsFamily = std::distance(graphicsFamilyIt, queueFamilies.begin());
-        return std::make_pair(device, std::move(indices));
+        return indices.graphicsFamily < queueFamilyCount && indices.presentFamily < queueFamilyCount;
+      };
+
+      for (uint32_t i = 0; i < queueFamilyCount; ++i)
+      {
+        if (indices.graphicsFamily == queueFamilyCount && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+          indices.graphicsFamily = i;
+          if (isSuitable())
+          {
+            return std::make_pair(device, std::move(indices));
+          }
+        }
+
+        if (indices.presentFamily == queueFamilyCount)
+        {
+          VkBool32 presentSupport = false;
+          vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+          if (presentSupport)
+          {
+            indices.presentFamily = i;
+            if (isSuitable())
+            {
+              return std::make_pair(device, std::move(indices));
+            }
+          }
+        }
       }
     }
 
     throw std::runtime_error("failed to find a suitable GPU!");
   }
 
-  static VkDevice createDevice(VkPhysicalDevice physicalDevice, const QueueFamilyIndices &indices)
+  static VkDevice
+  createDevice(VkPhysicalDevice physicalDevice, const QueueFamilyIndices &indices)
   {
     VkDeviceQueueCreateInfo queueCreateInfo{};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
