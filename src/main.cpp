@@ -13,6 +13,11 @@ struct QueueFamilyIndices
 {
   uint32_t graphicsFamily;
   uint32_t presentFamily;
+
+  bool isComplete(uint32_t guard)
+  {
+    return graphicsFamily < guard && presentFamily < guard;
+  }
 };
 
 class App
@@ -126,19 +131,14 @@ private:
 
       indices.graphicsFamily = queueFamilyCount;
       indices.presentFamily = queueFamilyCount;
-      auto isSuitable = [queueFamilyCount, &indices]()
-      {
-        return indices.graphicsFamily < queueFamilyCount && indices.presentFamily < queueFamilyCount;
-      };
-
       for (uint32_t i = 0; i < queueFamilyCount; ++i)
       {
         if (indices.graphicsFamily == queueFamilyCount && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
           indices.graphicsFamily = i;
-          if (isSuitable())
+          if (indices.isComplete(queueFamilyCount))
           {
-            return std::make_pair(device, std::move(indices));
+            break;
           }
         }
 
@@ -149,12 +149,17 @@ private:
           if (presentSupport)
           {
             indices.presentFamily = i;
-            if (isSuitable())
+            if (indices.isComplete(queueFamilyCount))
             {
-              return std::make_pair(device, std::move(indices));
+              break;
             }
           }
         }
+      }
+
+      if (indices.isComplete(queueFamilyCount))
+      {
+        return std::make_pair(device, std::move(indices));
       }
     }
 
