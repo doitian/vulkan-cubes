@@ -10,6 +10,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <fstream>
 
 struct QueueFamilyIndices
 {
@@ -99,6 +100,30 @@ const char *const REQUIRED_EXTENSIONS[] = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 const size_t REQUIRED_EXTENSIONS_SIZE = sizeof(REQUIRED_EXTENSIONS) / sizeof(REQUIRED_EXTENSIONS[0]);
 
+VkShaderModule readShader(VkDevice device, const std::string &filename)
+{
+  std::ifstream file(filename, std::ios::binary);
+  if (!file)
+  {
+    throw std::runtime_error("failed to load shader!");
+  }
+
+  auto code = std::vector<char>(std::istreambuf_iterator<char>(file),
+                                std::istreambuf_iterator<char>());
+
+  VkShaderModuleCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = code.size();
+  createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+
+  VkShaderModule shaderModule;
+  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
+  {
+    throw std::runtime_error("failed to create shader module!");
+  }
+  return shaderModule;
+}
+
 class App
 {
   GLFWwindow *window = nullptr;
@@ -113,6 +138,8 @@ class App
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
+  VkShaderModule vertShader = VK_NULL_HANDLE;
+  VkShaderModule fragShader = VK_NULL_HANDLE;
 
 public:
   void run()
@@ -124,34 +151,20 @@ public:
 
   ~App()
   {
-    for (auto imageView : this->swapChainImageViews)
+    vkDestroyShaderModule(device, vertShader, nullptr);
+    vkDestroyShaderModule(device, fragShader, nullptr);
+    for (auto imageView : swapChainImageViews)
     {
-      vkDestroyImageView(this->device, imageView, nullptr);
+      vkDestroyImageView(device, imageView, nullptr);
     }
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
+    vkDestroyDevice(device, nullptr);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroyInstance(instance, nullptr);
 
-    if (this->swapChain != VK_NULL_HANDLE)
+    if (window != nullptr)
     {
-      vkDestroySwapchainKHR(this->device, this->swapChain, nullptr);
-    }
-
-    if (this->device != VK_NULL_HANDLE)
-    {
-      vkDestroyDevice(this->device, nullptr);
-    }
-
-    if (this->surface != VK_NULL_HANDLE)
-    {
-      vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
-    }
-
-    if (this->instance != VK_NULL_HANDLE)
-    {
-      vkDestroyInstance(this->instance, nullptr);
-    }
-
-    if (this->window != nullptr)
-    {
-      glfwDestroyWindow(this->window);
+      glfwDestroyWindow(window);
       glfwTerminate();
     }
   }
@@ -183,6 +196,7 @@ private:
 
     createSwapChain(indices);
     createImageViews();
+    createGraphicsPipeline();
   }
 
   void createSwapChain(const QueueFamilyIndices &indices)
@@ -263,6 +277,12 @@ private:
         throw std::runtime_error("failed to create image views!");
       }
     }
+  }
+
+  void createGraphicsPipeline()
+  {
+    vertShader = readShader(device, "shaders/triangle.vert.spv");
+    fragShader = readShader(device, "shaders/triangle.frag.spv");
   }
 
   static VkInstance createInstance()
