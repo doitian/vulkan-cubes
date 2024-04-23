@@ -695,8 +695,13 @@ private:
     while (!glfwWindowShouldClose(window))
     {
       glfwPollEvents();
+      drawFrame();
     }
+
+    vkDeviceWaitIdle(device);
   }
+
+  void drawFrame() {}
 };
 
 int main()
