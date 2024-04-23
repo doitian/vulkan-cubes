@@ -147,6 +147,9 @@ class App
   std::vector<VkFramebuffer> swapChainFramebuffers;
   VkCommandPool commandPool;
   VkCommandBuffer commandBuffer;
+  VkSemaphore imageAvailableSemaphore;
+  VkSemaphore renderFinishedSemaphore;
+  VkFence inFlightFence;
 
 public:
   void run()
@@ -158,6 +161,9 @@ public:
 
   ~App()
   {
+    vkDestroyFence(device, inFlightFence, nullptr);
+    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     vkDestroyCommandPool(device, commandPool, nullptr);
     for (auto framebuffer : swapChainFramebuffers)
@@ -218,6 +224,7 @@ private:
     createFramebuffers();
     createCommandPool();
     createCommandBuffer();
+    createSyncObjects();
   }
 
   void createSwapChain(const QueueFamilyIndices &indices)
@@ -551,6 +558,22 @@ private:
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
     {
       throw std::runtime_error("failed to record command buffer!");
+    }
+  }
+
+  void createSyncObjects()
+  {
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+        vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS)
+    {
+      throw std::runtime_error("failed to create semaphores!");
     }
   }
 
