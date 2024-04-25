@@ -151,6 +151,7 @@ class App
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
   uint32_t currentFrame = 0;
+  bool framebufferResized = false;
 
   static const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -194,9 +195,10 @@ private:
   {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    this->window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+    window = glfwCreateWindow(800, 600, "Vulkan window", nullptr, nullptr);
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
   }
 
   void initVulkan()
@@ -620,6 +622,12 @@ private:
     }
   }
 
+  static void framebufferResizeCallback(GLFWwindow *window, int width, int height)
+  {
+    auto app = reinterpret_cast<App *>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+  }
+
   static VkInstance createInstance()
   {
     VkApplicationInfo appInfo{};
@@ -818,8 +826,9 @@ private:
     presentInfo.pResults = nullptr;
 
     result = vkQueuePresentKHR(presentQueue, &presentInfo);
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized)
     {
+      framebufferResized = false;
       recreateSwapChain();
     }
     else if (result != VK_SUCCESS)
@@ -832,6 +841,14 @@ private:
 
   void recreateSwapChain()
   {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    while (width == 0 || height == 0)
+    {
+      glfwGetFramebufferSize(window, &width, &height);
+      glfwWaitEvents();
+    }
+
     vkDeviceWaitIdle(device);
     cleanupSwapChain();
 
