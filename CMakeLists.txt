@@ -5,9 +5,14 @@ find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 find_package(stb REQUIRED)
+find_package(tinyobjloader REQUIRED)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan glfw)
+target_link_libraries(${PROJECT_NAME}
+  Vulkan::Vulkan
+  glfw
+  tinyobjloader::tinyobjloader
+)
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} "${glfw_LIB_DIRS_RELEASE}/glfw3.lib")
 endif()
@@ -16,6 +21,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${glfw3_INCLUDE_DIRS}
   ${glm_INCLUDE_DIRS}
   ${stb_INCLUDE_DIRS}
+  ${tinyobjloader_INCLUDE_DIRS}
 )
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
@@ -52,4 +58,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   "${CMAKE_SOURCE_DIR}/textures"
   "$<TARGET_FILE_DIR:${PROJECT_NAME}>/textures"
+)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models/"
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  "${CMAKE_SOURCE_DIR}/models"
+  "$<TARGET_FILE_DIR:${PROJECT_NAME}>/models"
 )
