@@ -12,16 +12,8 @@ target_link_libraries(${PROJECT_NAME}
   Vulkan::Vulkan
   glfw
   tinyobjloader::tinyobjloader
-)
-if(WIN32)
-  target_link_libraries(${PROJECT_NAME} "${glfw_LIB_DIRS_RELEASE}/glfw3.lib")
-endif()
-target_include_directories(${PROJECT_NAME} PUBLIC
-  ${Vulkan_INCLUDE_DIRS}
-  ${glfw3_INCLUDE_DIRS}
-  ${glm_INCLUDE_DIRS}
-  ${stb_INCLUDE_DIRS}
-  ${tinyobjloader_INCLUDE_DIRS}
+  glm::glm
+  stb::stb
 )
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
